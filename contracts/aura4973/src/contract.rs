@@ -31,6 +31,38 @@ pub fn instantiate(
 
 }
 
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response, ContractError> {
+    // get default Aura4973 contract
+    let contract = Aura4973::default();
+
+    // call and return the execute function
+    contract.execute(deps, env, info, msg)
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(
+    deps: Deps,
+    _env: Env,
+    msg: QueryMsg,
+) -> StdResult<Binary> {
+    // get default Aura4973 contract
+    let contract = Aura4973::default();
+
+    // call the query function
+    let response = contract
+        .query(deps, _env, msg)
+        .unwrap();
+
+    // return the response
+    Ok(to_binary(&response)?)
+}
+
 impl<'a> Aura4973<'a>{
     pub fn instantiate(
         &self,
