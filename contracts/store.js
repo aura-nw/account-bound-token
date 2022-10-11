@@ -6,7 +6,7 @@ const { SigningCosmWasmClient } = require('@cosmjs/cosmwasm-stargate');
 const { DirectSecp256k1HdWallet } = require('@cosmjs/proto-signing');
 const { calculateFee, GasPrice } = require('@cosmjs/stargate');
 
-async function deploy() {
+async function store() {
   // Deletes ALL existing entries
   if (process.env.DB_RESET || process.env.NODE_ENV === 'test') {
     await knex('standard_contracts').del();
@@ -27,4 +27,4 @@ async function deploy() {
   console.log(aura4973Response);
 }
 
-deploy()
+store()

@@ -45,7 +45,7 @@ const euphoria = {
   broadcastPollIntervalMs: 1000
 };
 
-let defaultChain = euphoria;
+let defaultChain = serenity;
 // switch (process.env.CHAIN_ID) {
 //   case 'euphoria':
 //     defaultChain = euphoria;

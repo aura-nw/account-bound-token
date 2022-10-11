@@ -1,14 +1,14 @@
 name = 'ABT'
-gas_price = '0.025ueaura'
+gas_price = '0.025uaura'
 gas_adjustment = 1.3
 account_prefix = 'aura'
 derivation_path = '''m/44'/118'/0'/0/0'''
 
 [networks.testnet]
-chain_id = 'euphoria-1'
+chain_id = 'erenity-testnet-001'
 network_variant = 'Shared'
-grpc_endpoint = 'https://grpc.euphoria.aura.network'
-rpc_endpoint = 'https://rpc.euphoria.aura.network'
+grpc_endpoint = 'https://grpc.serenity.aura.network'
+rpc_endpoint = 'https://rpc.serenity.aura.network'
 
 [accounts.validator]
 mnemonic = 'satisfy adjust timber high purchase tuition stool faith fine install that you unaware feed domain license impose boss human eager hat rent enjoy dawn'
