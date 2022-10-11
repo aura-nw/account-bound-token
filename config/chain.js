@@ -45,24 +45,24 @@ const euphoria = {
   broadcastPollIntervalMs: 1000
 };
 
-let defaultChain = null;
-switch (process.env.CHAIN_ID) {
-  case 'euphoria':
-    defaultChain = euphoria;
-    break;
-  case 'serenity':
-    defaultChain = serenity;
-    break;
-  case 'local-docker':
-    defaultChain = localDocker;
-    break;
-  case 'aura-testnet':
-    defaultChain = auraTestnet;
-    break;
-  default:
-    defaultChain = local;
-    break;
-}
+let defaultChain = euphoria;
+// switch (process.env.CHAIN_ID) {
+//   case 'euphoria':
+//     defaultChain = euphoria;
+//     break;
+//   case 'serenity':
+//     defaultChain = serenity;
+//     break;
+//   case 'local-docker':
+//     defaultChain = localDocker;
+//     break;
+//   case 'aura-testnet':
+//     defaultChain = auraTestnet;
+//     break;
+//   default:
+//     defaultChain = local;
+//     break;
+// }
 
 defaultChain.mnemonic = process.env.MNEMONIC
   || 'grief assault labor select faint leader impulse broken help garlic carry practice cricket cannon draw resist clump jar debris sentence notice poem drip benefit';

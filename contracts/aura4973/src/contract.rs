@@ -1,5 +1,5 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, Binary, to_binary, Deps, Order};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, Binary, to_binary, Deps, Order, entry_point};
 
 use cw2::set_contract_version;
 
@@ -11,12 +11,30 @@ use crate::state::{Aura4973, ContractInfoResponse, NumNftsResponse, NftInfo, Own
 const CONTRACT_NAME: &str = "crates.io:aura-4973";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn instantiate(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
+) -> StdResult<Response> {
+    // get default Aura4973 contract
+    let contract = Aura4973::default();
+
+    // call the instantiate function
+    let response = contract
+        .instantiate(deps, msg)
+        .unwrap();
+        
+    // return the response
+    Ok(response)
+
+}
+
 impl<'a> Aura4973<'a>{
     pub fn instantiate(
         &self,
         deps: DepsMut,
-        _env: Env,
-        _info: MessageInfo,
         msg: InstantiateMsg,
     ) -> StdResult<Response> {
         set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -31,6 +49,9 @@ impl<'a> Aura4973<'a>{
         self.contract_info.save(deps.storage, &info)?;
         self.minter.save(deps.storage, &minter)?;
         self.nft_count.save(deps.storage, &0u64)?;
+
+        // set the contract version
+        set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
         Ok(Response::default())
     }

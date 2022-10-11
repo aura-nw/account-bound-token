@@ -1,2 +1,2 @@
-c472ba442aa81d8904a992e03f148e014d6c7f3d6ce372376d61756edbe8275d  target/wasm32-unknown-unknown/release/aura_4973.wasm
 051f0ab3a3746de86951d498f337363b6803a3e84f80be2b62494164aba00639  target/wasm32-unknown-unknown/release/schema.wasm
+774cd8284def458134c7ed79da7dd3b64abc175aff68eb9bbc0fd697279eb099  target/wasm32-unknown-unknown/release/aura_4973.wasm

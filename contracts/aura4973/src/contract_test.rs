@@ -19,15 +19,9 @@ fn setup_contract(deps: DepsMut) -> Aura4973 {
         minter: String::from(MINTER),
     };
 
-    // prepare the message info
-    let msg_info = mock_info("creator", &[]);
-
-    // prepare the env
-    let env = mock_env();
-
     // call the instantiate function
     let response = contract
-        .instantiate(deps, env, msg_info, contract_info)
+        .instantiate(deps, contract_info)
         .unwrap();
 
     // check the response

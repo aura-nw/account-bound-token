@@ -1,5 +1,5 @@
 name = 'ABT'
-gas_price = '0.025uaura'
+gas_price = '0.025ueaura'
 gas_adjustment = 1.3
 account_prefix = 'aura'
 derivation_path = '''m/44'/118'/0'/0/0'''
