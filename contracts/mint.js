@@ -30,8 +30,4 @@ async function mint(_contract, _nftID, _recipient, _uri) {
 }
 
 const myArgs = process.argv.slice(2);
-console.log('myArgs[0]: ', myArgs[0]);
-console.log('myArgs[1]: ', myArgs[1]);
-console.log('myArgs[2]: ', myArgs[2]);
-console.log('myArgs[3]: ', myArgs[3]);
 mint(myArgs[0], myArgs[1], myArgs[2], myArgs[3]);
