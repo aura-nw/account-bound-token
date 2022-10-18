@@ -1,15 +1,18 @@
+use cosmwasm_std::Addr;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, Binary, to_binary, Deps, Order, entry_point};
-
+use sha2::{Digest, Sha256};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, QueryMsg, InstantiateMsg};
-use crate::state::{Aura4973, ContractInfoResponse, NumNftsResponse, NftInfo, OwnerOfResponse};
+use crate::state::{Aura4973, ContractInfoResponse, NameResponse, SymbolResponse, NumNftsResponse, NftInfo, OwnerOfResponse};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:aura-4973";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+const AGREEMENT_STRING: &str = "Agreement(address active,address passive,string tokenURI)";
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -96,9 +99,11 @@ impl<'a> Aura4973<'a>{
         msg: ExecuteMsg,
     ) -> Result<Response, ContractError> {
         match msg {
-            ExecuteMsg::Mint { nft_id, owner, nft_uri } => self.execute_mint(deps, env, info, nft_id, owner, nft_uri),
+            ExecuteMsg::Give { to, uri, signature } => self.execute_give(deps, env, info, to, uri, signature),
+            ExecuteMsg::Take { from, uri, signature } => self.execute_take(deps, env, info, from, uri, signature),
             ExecuteMsg::UnEquip { nft_id } => self.execute_unequip(deps, env, info, nft_id),
             ExecuteMsg::Equip { nft_id } => self.execute_equip(deps, env, info, nft_id),
+            ExecuteMsg::Mint { nft_id, owner, nft_uri } => self.execute_mint(deps, env, info, nft_id, owner, nft_uri),
             ExecuteMsg::UnAdmit { nft_id } => self.execute_unadmit(deps, env, info, nft_id),
         }
     }
@@ -111,12 +116,58 @@ impl<'a> Aura4973<'a>{
     ) -> StdResult<Binary> {
         match msg {
             QueryMsg::ContractInfo {} => to_binary(&self.contract_info(deps)?),
+            QueryMsg::Name {} => to_binary(&self.name(deps)?),
+            QueryMsg::Symbol {} => to_binary(&self.symbol(deps)?),
             QueryMsg::NftInfo { nft_id } => to_binary(&self.nft_info(deps, nft_id)?),
             QueryMsg::OwnerOf { nft_id } => to_binary(&self.owner_of(deps, nft_id)?),
             QueryMsg::NumNfts {} => to_binary(&self.num_nfts(deps)?),
             QueryMsg::AllUnequippedNftOf { owner} => to_binary(&self.all_unequipped_nft_of(deps, owner)?),
             QueryMsg::AllEquippedNftOf { owner } => to_binary(&self.all_equipped_nft_of(deps, owner)?),
         }
+    }
+
+    // The execution functions for contract
+
+    // execute_give function is used to give a nft to another address
+    pub fn execute_give(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        to: Addr,
+        uri: String,
+        signature: String,
+    ) -> Result<Response, ContractError> {
+        // Cannot give NFT from a user who is not the minter
+        let minter = self.minter.load(deps.storage)?;
+        if info.sender != minter {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        // get hash for the agreement
+        let hash = self.get_hash(info.sender.to_string(), to.to_string(), uri);
+        
+        let pubkey = deps.api.secp256k1_recover_pubkey(hash, signature.as_bytes(), 1).unwrap();
+        // deps.api.secp256k1_verify(&hash, signature.as_bytes(), &pubkey); 
+
+        
+        
+ 
+
+
+    }
+
+    // the get_hash funtion will concat the address of the sender, the address of the 'to', the uri of the nft and the hash of the string
+    fn get_hash(
+        &self,
+        active: String,
+        passive: String,
+        uri: String,
+    ) -> &[u8] {
+        // hash the constant string and data
+        let big_string = format!("{}{}{}{}", AGREEMENT_STRING, active, passive, uri);
+        let hash = Sha256::digest(big_string.as_bytes());
+        hash.as_slice()
     }
 
     // execute_mint is a function that allows the minter mints a nft with id and nft_uri to owner
@@ -298,6 +349,18 @@ impl<'a> Aura4973<'a>{
             equiped: info.equiped,
             is_admitted: info.is_admitted,
         })
+    }
+
+    // name returns the name of the contract
+    fn name(&self, deps: Deps) -> StdResult<NameResponse> {
+        let info = self.contract_info(deps)?;
+        Ok(NameResponse { name: info.name })
+    }
+
+    // symbol returns the symbol of the contract
+    fn symbol(&self, deps: Deps) -> StdResult<SymbolResponse> {
+        let info = self.contract_info(deps)?;
+        Ok(SymbolResponse { symbol: info.symbol })
     }
 
     // all_unequipped_nft_of is a function that returns all the nfts of a given owner that are unequipped

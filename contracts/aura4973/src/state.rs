@@ -90,6 +90,15 @@ pub struct ContractInfoResponse {
     pub symbol: String,
 }
 
+#[cw_serde]
+pub struct NameResponse {
+    pub name: String,
+}
+
+#[cw_serde]
+pub struct SymbolResponse {
+    pub symbol: String,
+}
 
 #[cw_serde]
 pub struct OwnerOfResponse {
