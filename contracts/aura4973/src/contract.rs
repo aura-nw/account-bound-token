@@ -1,12 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, Binary, to_binary, Deps, Order, entry_point};
+use schemars::JsonSchema;
 use sha2::{Digest, Sha256};
 use cw2::set_contract_version;
 use std::str;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, QueryMsg, InstantiateMsg};
-use crate::state::{Aura4973, ContractInfoResponse, NameResponse, SymbolResponse, NumNftsResponse, NftInfo, OwnerOfResponse};
+use crate::state::{Aura4973, ContractInfoResponse, NameResponse, SymbolResponse, NumNftsResponse, NftInfo, OwnerOfResponse, ADR36SignDoc, Fee, MsgSignData, MsgSignDataValue};
 
 use bech32::{ToBase32, Variant::Bech32};
 use ripemd::{Ripemd160};
@@ -482,6 +483,54 @@ impl<'a> Aura4973<'a>{
                 }
             });
         Ok(equipped_nfts)
+    }
+
+}
+
+
+// create signable structure from message and chain ID
+pub fn get_sign_doc(
+    signer: String,
+    data: String,
+    chain_id: String
+) -> ADR36SignDoc {
+    // create signable structure
+    let doc = ADR36SignDoc {
+        chain_id: chain_id,
+        account_number: "0".to_string(),
+        sequence: "0".to_string(),
+        fee: Fee {
+            gas: "0".to_string(),
+            amount: [].to_vec(),
+        },
+        msgs: [MsgSignData {
+            r#type: "sign/MsgSignData".to_string(),
+            value: MsgSignDataValue {
+                signer: signer,
+                data: data.into_bytes(),
+            },
+        }].to_vec(),
+        memo: "".to_string()
+    };
+
+    doc
+}
+// testing function for get_signDoc
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_sign_doc() {
+        // get signDoc
+        let signer = "signer".to_string();
+        let data = "data".to_string();
+        let chain_id = "chainID".to_string();
+        let sign_doc = get_sign_doc(signer, data, chain_id);
+        println!("{}", serde_json::to_string(&sign_doc).unwrap());
+        
+        // throw to check manually
+        assert_eq!(1, 0);
     }
 }
 

@@ -106,6 +106,37 @@ pub struct OwnerOfResponse {
     pub owner: String,
 }
 
+#[cw_serde]
+pub struct MsgSignDataValue {
+    pub signer: String,
+    pub data: Vec<u8>,
+}
+
+// MsgSignData based on ADR 036 of cosmos sdk
+#[cw_serde]
+pub struct MsgSignData {
+    pub r#type: String,
+    // value is a struct with signer and data
+    pub value: MsgSignDataValue,
+}
+
+#[cw_serde]
+pub struct Fee {
+    pub gas: String,
+    pub amount: Vec<u8>,
+}
+
+// ADR 36 SignDoc based on cosmos sdk
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ADR36SignDoc {
+    pub chain_id: String,
+    pub account_number: String,
+    pub sequence: String,
+    pub fee: Fee,
+    pub msgs: Vec<MsgSignData>,
+    pub memo: String,
+}
+
 pub fn token_owner_idx(_pk: &[u8], d: &NftInfo) -> String {
     d.owner.clone()
 }
