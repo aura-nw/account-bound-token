@@ -1,12 +1,15 @@
-use cosmwasm_std::Addr;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, Binary, to_binary, Deps, Order, entry_point};
 use sha2::{Digest, Sha256};
 use cw2::set_contract_version;
+use std::str;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, QueryMsg, InstantiateMsg};
 use crate::state::{Aura4973, ContractInfoResponse, NameResponse, SymbolResponse, NumNftsResponse, NftInfo, OwnerOfResponse};
+
+use bech32::{ToBase32, Variant::Bech32};
+use ripemd::{Ripemd160};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:aura-4973";
@@ -99,11 +102,11 @@ impl<'a> Aura4973<'a>{
         msg: ExecuteMsg,
     ) -> Result<Response, ContractError> {
         match msg {
-            ExecuteMsg::Give { to, uri, signature } => self.execute_give(deps, env, info, to, uri, signature),
-            ExecuteMsg::Take { from, uri, signature } => self.execute_take(deps, env, info, from, uri, signature),
+            ExecuteMsg::Give { to, uri, signature } => self.execute_give(deps, info, to, uri, signature),
+            ExecuteMsg::Take { from, uri, signature } => self.execute_take(deps, info, from, uri, signature),
             ExecuteMsg::UnEquip { nft_id } => self.execute_unequip(deps, env, info, nft_id),
             ExecuteMsg::Equip { nft_id } => self.execute_equip(deps, env, info, nft_id),
-            ExecuteMsg::Mint { nft_id, owner, nft_uri } => self.execute_mint(deps, env, info, nft_id, owner, nft_uri),
+            // ExecuteMsg::Mint { nft_id, owner, nft_uri } => self.execute_mint(deps, env, info, nft_id, owner, nft_uri),
             ExecuteMsg::UnAdmit { nft_id } => self.execute_unadmit(deps, env, info, nft_id),
         }
     }
@@ -129,12 +132,12 @@ impl<'a> Aura4973<'a>{
     // The execution functions for contract
 
     // execute_give function is used to give a nft to another address
+    // only the minter can call this function
     pub fn execute_give(
         &self,
         deps: DepsMut,
-        env: Env,
         info: MessageInfo,
-        to: Addr,
+        to: String,
         uri: String,
         signature: String,
     ) -> Result<Response, ContractError> {
@@ -144,47 +147,126 @@ impl<'a> Aura4973<'a>{
             return Err(ContractError::Unauthorized {});
         }
 
+        // get the nft id using _safeCheckAgreement function
+        let nft_id = self._safe_check_agreement(&deps, &minter.into_string(), &to, &uri, &signature);
+        
+        // check if the nft id is empty, then return error
+        if nft_id.is_empty() {
+            return Err(ContractError::To {});
+        }
+
+        // mint the nft to the address 'to' and return the response of mint function
+        self._mint(deps, nft_id, &to.to_string(), uri)
+    }
+
+    // execute_take function is used to take a nft from another address
+    // the user can only take nft from minter
+    pub fn execute_take(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        from: String,
+        uri: String,
+        signature: String,
+    ) -> Result<Response, ContractError> {
+        // check 'from' is a valid human's address
+        let from_addr = deps.api.addr_validate(&from)?;
+
+        // Cannot take NFT from a user who is not the minter
+        let minter = self.minter.load(deps.storage)?;
+        if from_addr != minter {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        // get address of the owner of the nft from info.sender
+        let owner = info.sender.clone();
+
+        // get the nft id using _safeCheckAgreement function
+        let nft_id = self._safe_check_agreement(&deps, &owner.to_string(), &from, &uri, &signature);
+        
+        // check if the nft id is empty, then return error
+        if nft_id.is_empty() {
+            return Err(ContractError::From {});
+        }
+
+        // mint the nft to the owner and return the response of function _mint
+        self._mint(deps, nft_id, &owner.to_string(), uri)
+
+    }
+
+    // get_bech32_address function is used to get the bech32 address from the public key and hrp
+    // hrp is the human readable part of the bech32 address
+    // hrp in Aura chain is "aura"
+    fn _get_bech32_address(&self, hrp: &str, pubkey: Vec<u8>) -> Result<String, ContractError> {
+        // get the hash of the pubkey bytes
+        let pk_hash = Sha256::digest(&pubkey);
+
+        // Insert the hash result in the ripdemd hash function
+        let mut rip_hasher = Ripemd160::default();
+        rip_hasher.update(pk_hash);
+        let rip_result = rip_hasher.finalize();
+
+        let address_bytes = rip_result.to_vec();
+
+        let bech32_address = bech32::encode(hrp, address_bytes.to_base32(), Bech32)
+            .map_err(|err| ContractError::Hrp(err.to_string()))?;
+
+        Ok(bech32_address)
+    }
+
+    // _safeCheckAgreement function is used to check if the agreement is valid or not
+    // if the agreement is valid then it returns the id of the nft
+    fn _safe_check_agreement(
+        &self,
+        deps: &DepsMut,
+        active: &String,
+        passive: &String,
+        uri: &String,
+        signature: &String,
+    ) -> String {
         // get hash for the agreement
-        let hash = self.get_hash(info.sender.to_string(), to.to_string(), uri);
+        let hash = Aura4973::<'a>::_get_hash(&active, &passive, &uri);
         
-        let pubkey = deps.api.secp256k1_recover_pubkey(hash, signature.as_bytes(), 1).unwrap();
-        // deps.api.secp256k1_verify(&hash, signature.as_bytes(), &pubkey); 
-
+        // recover the public key from the signature and the hash
+        let pubkey = deps.api.secp256k1_recover_pubkey(&hash, signature.as_bytes(), 1).unwrap();
         
-        
- 
+        // get the address of signer from the public key using get_bech32_address function
+        let signer_address = self._get_bech32_address("aura", pubkey).unwrap();
 
+        // check if the recovered address is same as the 'to' address, then return empty string
+        if signer_address != *passive {
+            return "".to_string();
+        } else {
+            // the id of the nft is the hash of hash value using sha256
+            let nft_id = Sha256::digest(&hash);
 
+            // return the nft id as string
+            return str::from_utf8(nft_id.as_slice()).unwrap().to_string();
+        }
     }
 
     // the get_hash funtion will concat the address of the sender, the address of the 'to', the uri of the nft and the hash of the string
-    fn get_hash(
-        &self,
-        active: String,
-        passive: String,
-        uri: String,
-    ) -> &[u8] {
+    fn _get_hash(
+        active: &String,
+        passive: &String,
+        uri: &String,
+    ) -> Vec<u8> {
         // hash the constant string and data
         let big_string = format!("{}{}{}{}", AGREEMENT_STRING, active, passive, uri);
         let hash = Sha256::digest(big_string.as_bytes());
-        hash.as_slice()
+        
+        // return the hash
+        return hash.as_slice().to_vec();
     }
 
-    // execute_mint is a function that allows the minter mints a nft with id and nft_uri to owner
-    pub fn execute_mint(
+    // _mint is a function that allows the minter mints a nft with id and nft_uri to owner
+    pub fn _mint(
         &self,
         deps: DepsMut,
-        _env: Env,
-        info: MessageInfo,
         nft_id: String,
-        owner: String,
+        owner: &String,
         nft_uri: String,
     ) -> Result<Response, ContractError> {
-        let minter = self.minter.load(deps.storage)?;
-        if info.sender != minter {
-            return Err(ContractError::NotMinter {});
-        }
-
         let owner_addr = deps.api.addr_validate(&owner)?;
         let nft_info = NftInfo {
             id: nft_id.clone(),
@@ -202,7 +284,6 @@ impl<'a> Aura4973<'a>{
         
         Ok(Response::new()
             .add_attribute("action", "mint")
-            .add_attribute("minter", info.sender)
             .add_attribute("nft_id", nft_id)
             .add_attribute("owner", owner))
     }

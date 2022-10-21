@@ -20,4 +20,13 @@ pub enum ContractError {
 
     #[error("NFT is already unadmitted")]
     NftAlreadyUnadmitted {},
+
+    #[error("invalid human readable path {0}")]
+    Hrp(String),
+
+    #[error("invalid receiver address")]
+    To(),
+
+    #[error("invalid sender address")]
+    From(),
 }

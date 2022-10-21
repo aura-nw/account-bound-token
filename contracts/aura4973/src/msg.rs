@@ -94,18 +94,6 @@ pub enum ExecuteMsg {
 
     /// @notice un admit the `String token_id` from account.
     UnAdmit{ nft_id: String },
-
-    /// @notice Mint a token to user
-    Mint{
-        /// Unique ID of the NFT
-        nft_id: String,
-        /// The owner of the newly minter NFT
-        owner: String,
-        /// Universal resource identifier for this NFT
-        /// Should point to a JSON file that conforms to the ERC721
-        /// Metadata JSON Schema
-        nft_uri: String,
-    },
 }
 
 /// Message type for `migrate` entry_point
